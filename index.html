@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b0b0b">
+<title>Đồng Hồ Cờ Tướng Pro</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#090909;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
+button,input,select{font:inherit}
+.app{height:100svh;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 10px env(safe-area-inset-bottom);gap:8px}
+.top{height:44px;display:flex;align-items:center;justify-content:space-between}
+.title{font-weight:800;font-size:16px;letter-spacing:.2px}.sub{font-size:11px;opacity:.5}
+.icon{border:0;background:#202020;color:#fff;width:40px;height:36px;border-radius:10px;font-size:19px}
+.board{flex:1;min-height:0;display:grid;grid-template-rows:1fr 1fr;gap:8px}
+.player{position:relative;border:0;border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;overflow:hidden}
+.player.red{background:linear-gradient(145deg,#351515,#160b0b)}
+.player.black{background:linear-gradient(145deg,#1b1d25,#090a0e)}
+.player.active{outline:3px solid #fff;box-shadow:0 0 30px rgba(255,255,255,.16)}
+.player.timeout{animation:flash .5s infinite alternate}
+@keyframes flash{to{filter:brightness(1.7)}}
+.badge{position:absolute;top:12px;left:14px;font-weight:800;font-size:14px}
+.count{position:absolute;top:12px;right:14px;font-size:12px;opacity:.6}
+.clock{font-variant-numeric:tabular-nums;font-weight:900;font-size:clamp(58px,17vw,118px);line-height:.95;letter-spacing:1px}
+.move{margin-top:9px;font-variant-numeric:tabular-nums;font-size:13px;opacity:.75}
+.move b{font-size:18px;opacity:1}
+.turn{position:absolute;bottom:12px;font-size:11px;opacity:.55}
+.controls{height:58px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.controls button{border:0;border-radius:13px;background:#252525;color:#fff;font-weight:800}
+.controls .main{background:#fff;color:#111}
+.overlay{display:none;position:fixed;z-index:20;inset:0;background:rgba(0,0,0,.88);padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));overflow:auto}
+.overlay.show{display:block}
+.sheet{max-width:560px;margin:0 auto;background:#181818;border:1px solid #333;border-radius:20px;padding:18px}
+.sheet h2{margin:0 0 16px;font-size:20px}
+.field{margin:13px 0}.field label{display:block;font-size:13px;opacity:.75;margin-bottom:7px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+input,select{width:100%;padding:12px;border:1px solid #444;border-radius:11px;background:#101010;color:#fff}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}
+.actions button{border:0;border-radius:12px;padding:13px;font-weight:800;background:#333;color:#fff}
+.actions .save{background:#fff;color:#111}
+.hint{font-size:11px;line-height:1.45;opacity:.55;margin-top:6px}
+.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#fff;color:#111;padding:10px 14px;border-radius:12px;font-weight:800;font-size:13px;display:none;z-index:30;white-space:nowrap}
+.toast.show{display:block}
+@media (orientation:landscape){
+ .app{padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}
+ .top{height:32px}
+ .board{grid-template-columns:1fr 1fr;grid-template-rows:1fr}
+ .controls{height:48px}
+ .clock{font-size:clamp(48px,10vw,92px)}
+ .turn{bottom:8px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div><div class="title">♟ CỜ TƯỚNG PRO</div><div class="sub" id="status">Sẵn sàng</div></div>
+    <button class="icon" id="gear">⚙️</button>
+  </div>
+
+  <div class="board">
+    <button class="player red" id="red">
+      <div class="badge">🔴 ĐỎ</div><div class="count" id="rc">0 nước</div>
+      <div class="clock" id="rt">30:00</div>
+      <div class="move">Nước này <b id="rm">5:00</b></div>
+      <div class="turn" id="rturn">Chưa bắt đầu</div>
+    </button>
+    <button class="player black" id="black">
+      <div class="badge">⚫ ĐEN</div><div class="count" id="bc">0 nước</div>
+      <div class="clock" id="bt">30:00</div>
+      <div class="move">Nước này <b id="bm">5:00</b></div>
+      <div class="turn" id="bturn">Chờ Đỏ</div>
+    </button>
+  </div>
+
+  <div class="controls">
+    <button class="main" id="start">▶ BẮT ĐẦU</button>
+    <button id="pause">Ⅱ TẠM DỪNG</button>
+    <button id="reset">↻ VÁN MỚI</button>
+  </div>
+</div>
+
+<div class="overlay" id="settings">
+ <div class="sheet">
+  <h2>⚙️ Cài đặt đồng hồ</h2>
+  <div class="field"><label>Thời gian tổng mỗi bên</label><div class="row">
+    <input id="h" type="number" min="0" value="0" placeholder="Giờ">
+    <input id="m" type="number" min="0" value="30" placeholder="Phút">
+  </div><div class="hint">Ví dụ 1 giờ 30 phút: nhập 1 và 30.</div></div>
+  <div class="field"><label>Giới hạn thời gian mỗi nước</label><div class="row">
+    <input id="mh" type="number" min="0" value="0" placeholder="Phút">
+    <input id="ms" type="number" min="0" max="59" value="5" placeholder="Giây">
+  </div></div>
+  <div class="field"><label>Cộng sau mỗi nước (Fischer)</label>
+    <select id="inc"><option value="0">Không cộng</option><option value="5">+5 giây</option><option value="10" selected>+10 giây</option><option value="15">+15 giây</option><option value="20">+20 giây</option><option value="30">+30 giây</option><option value="60">+60 giây</option></select>
+  </div>
+  <div class="field"><label>Bên đi trước</label>
+    <select id="first"><option value="red" selected>Đỏ</option><option value="black">Đen</option></select>
+  </div>
+  <div class="actions"><button id="close">Đóng</button><button class="save" id="save">LƯU & VÁN MỚI</button></div>
+ </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(()=> {
+const $=id=>document.getElementById(id);
+let cfg={base:1800,move:300,inc:10,first:"red"};
+let t={red:1800,black:1800}, mt={red:300,black:300}, n={red:0,black:0};
+let active=null,running=false,over=false,last=0,raf=0;
+
+function fmt(v){
+ v=Math.max(0,Math.floor(v)); const s=v%60, m=Math.floor(v/60)%60, h=Math.floor(v/3600);
+ return h?`${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+function render(){
+ $("rt").textContent=fmt(t.red); $("bt").textContent=fmt(t.black);
+ $("rm").textContent=fmt(mt.red); $("bm").textContent=fmt(mt.black);
+ $("rc").textContent=n.red+" nước"; $("bc").textContent=n.black+" nước";
+ $("red").classList.toggle("active",running&&active==="red");
+ $("black").classList.toggle("active",running&&active==="black");
+ $("rturn").textContent=active==="red"?(running?"ĐANG ĐI":"Đỏ"):active==="black"?"Đã đi":"Chưa bắt đầu";
+ $("bturn").textContent=active==="black"?(running?"ĐANG ĐI":"Đen"):active==="red"?"Đã đi":"Chờ Đỏ";
+}
+function msg(x){$("status").textContent=x}
+function stop(){cancelAnimationFrame(raf);raf=0}
+function loop(now){
+ if(!running)return;
+ const dt=Math.min(.2,(now-last)/1000);last=now;
+ t[active]-=dt;mt[active]-=dt;
+ if(t[active]<=0){t[active]=0;finish(active,"HẾT GIỜ TỔNG");return}
+ if(mt[active]<=0){mt[active]=0;finish(active,"HẾT THỜI GIAN NƯỚC");return}
+ render();raf=requestAnimationFrame(loop)
+}
+function start(){
+ if(over)return;
+ if(!active)active=cfg.first;
+ running=true;last=performance.now();msg(active==="red"?"Đỏ đang đi":"Đen đang đi");
+ stop();raf=requestAnimationFrame(loop);render();
+}
+function press(side){
+ if(over)return;
+ if(!active)active=cfg.first;
+ if(!running){start();return}
+ if(active!==side)return;
+ n[side]++;t[side]+=cfg.inc;mt[side]=cfg.move;
+ active=side==="red"?"black":"red";msg(active==="red"?"Đỏ đang đi":"Đen đang đi");render();
+}
+function pause(){if(!running)return;running=false;stop();msg("Đã tạm dừng");render()}
+function finish(loser,why){
+ running=false;over=true;stop();const win=loser==="red"?"Đen":"Đỏ";
+ msg(`${why} — ${win} THẮNG`);render();
+ if(navigator.vibrate)navigator.vibrate([150,80,150]);
+ toast(`${why} — ${win} thắng`);
+}
+function reset(){
+ running=false;over=false;stop();active=null;
+ t={red:cfg.base,black:cfg.base};mt={red:cfg.move,black:cfg.move};n={red:0,black:0};
+ msg("Sẵn sàng");render();
+}
+function toast(x){$("toast").textContent=x;$("toast").classList.add("show");setTimeout(()=>$("toast").classList.remove("show"),2200)}
+$("red").onclick=()=>press("red");$("black").onclick=()=>press("black");
+$("start").onclick=start;$("pause").onclick=pause;$("reset").onclick=reset;
+$("gear").onclick=()=>{$("settings").classList.add("show")};$("close").onclick=()=>{$("settings").classList.remove("show")};
+$("save").onclick=()=>{
+ const h=Math.max(0,+$("h").value||0),m=Math.max(0,+$("m").value||0);
+ const mh=Math.max(0,+$("mh").value||0),ms=Math.min(59,Math.max(0,+$("ms").value||0));
+ const base=h*3600+m*60,move=mh*60+ms;
+ if(base<=0||move<=0){toast("Hãy nhập thời gian hợp lệ");return}
+ cfg={base,move,inc:+$("inc").value,first:$("first").value};
+ $("settings").classList.remove("show");reset();
+};
+render();
+})();
+</script>
+</body>
+</html>
